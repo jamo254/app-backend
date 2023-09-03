@@ -1,12 +1,11 @@
 const express = require('express');
 const bodyParser = require('body-parser');
 const cors = require('cors');
-const { check, validationResult } = require('express-validator'); // Import check and validationResult
+const { check, validationResult } = require('express-validator');
 
 const app = express();
 const PORT = process.env.PORT || 8000;
 
-// Middleware
 app.use(cors());
 app.use(bodyParser.json());
 
@@ -22,26 +21,30 @@ const data = [
 
 app.post('/search', [
     check('email').isEmail().withMessage('Invalid email format'),
-    check('number').optional().matches(/^\d{6}$/).withMessage('Invalid number format'),
+    check('number').optional().matches(/^\d{2}-\d{2}-\d{2}$/).withMessage('Invalid number format'),
 ],
-    (req, res) => {
-        const errors = validationResult(req);
-        if (!errors.isEmpty()) {
-            return res.status(400).json({ errors: errors.array() });
+    async (req, res) => {
+        try {
+            const errors = validationResult(req);
+            if (!errors.isEmpty()) {
+                return res.status(400).json({ errors: errors.array() });
+            }
+            const { email, number } = req.body;
+            // Delay the request processing by 5 seconds
+            setTimeout(() => {
+                const result = data.filter((user) => {
+                    return user.email === email && (!number || user.number.includes(number.replace(/-/g, '')));
+                });
+
+                res.json(result);
+            }, 1000);
+        } catch (error) {
+            console.error('Error in /search endpoint:', error);
+            res.status(500).json({ error: 'Internal server error' });
         }
-        // Body content
-        const { email, number } = req.body;
-        // Delay the request processing by 5 seconds
-        setTimeout(() => {
-            const result = data.filter((user) => {
-                return user.email === email && (!number || user.number === number); // Corrected condition
-            });
-            res.json(result);
-        }, 5000);
     }
 );
 
-// Setting up server
 app.listen(PORT, () => {
-    console.log(`listening on port ${PORT}`);
+    console.log(`Listening on port ${PORT}`);
 });
